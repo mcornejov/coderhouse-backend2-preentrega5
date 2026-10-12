@@ -1,0 +1,52 @@
+{
+  "name": "cafe-aurora-eventos",
+  "version": "0.5.0",
+  "description": "Plataforma de Eventos e Inscripciones de Café Aurora (Backend II): API REST con Express organizada por capas, MongoDB con Mongoose y autenticación con Passport (JWT en cookie httpOnly) y autorización por roles (user, organizer, admin) con matriz de permisos y middlewares reutilizables.",
+  "type": "module",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "test": "node --import ./test/env.js --test test/*.test.js",
+    "asignar-rol": "node src/scripts/asignar-rol.js"
+  },
+  "keywords": [
+    "nodejs",
+    "express",
+    "esm",
+    "mongodb",
+    "mongoose",
+    "bcrypt",
+    "jwt",
+    "cookies",
+    "passport",
+    "autenticacion",
+    "autorizacion",
+    "roles",
+    "eventos",
+    "inscripciones",
+    "backend",
+    "arquitectura-en-capas"
+  ],
+  "author": "mcornejov",
+  "license": "ISC",
+  "packageManager": "pnpm@11.0.9",
+  "engines": {
+    "node": ">=20.19.0"
+  },
+  "dependencies": {
+    "bcrypt": "^6.0.0",
+    "cookie-parser": "^1.4.7",
+    "dotenv": "^18.0.4",
+    "express": "^5.2.1",
+    "jsonwebtoken": "^9.0.3",
+    "mongoose": "^9.10.2",
+    "passport": "^0.7.0",
+    "passport-jwt": "^4.0.1",
+    "passport-local": "^1.0.0"
+  },
+  "devDependencies": {
+    "mongodb-memory-server": "^11.3.0",
+    "supertest": "^7.3.0"
+  }
+}
