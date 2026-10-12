@@ -66,7 +66,12 @@ export default class EventsService {
     }
     this.#validarValores(cambios);
 
-    return this.repository.updateById(id, cambios);
+    const actualizado = await this.repository.updateById(id, cambios);
+    if (!actualizado) {
+      // El evento desapareció entre la lectura y la escritura
+      throw new NotFoundError(`No existe un evento con id ${id}`);
+    }
+    return actualizado;
   }
 
   // Whitelist: ignora cualquier campo fuera de CAMPOS_EVENTO (organizer, status, _id...)
@@ -81,8 +86,8 @@ export default class EventsService {
     return resultado;
   }
 
-  // Reglas de contenido mínimas. La fecha se valida aquí porque Mongoose convertiría
-  // un texto inválido en un error genérico de validación.
+  // Reglas de contenido mínimas. La fecha debe llegar como texto (ISO 8601): un número
+  // o un booleano también "son" una fecha para new Date() y guardarían 1970 sin aviso.
   #validarValores(evento) {
     for (const campo of ['title', 'location']) {
       if (evento[campo] !== undefined && !isNonEmptyString(evento[campo])) {
@@ -92,8 +97,8 @@ export default class EventsService {
     if (evento.description !== undefined && typeof evento.description !== 'string') {
       throw new BadRequestError('El campo description debe ser un texto');
     }
-    if (evento.date !== undefined && Number.isNaN(new Date(evento.date).getTime())) {
-      throw new BadRequestError('El campo date debe ser una fecha válida');
+    if (evento.date !== undefined && !(typeof evento.date === 'string' && !Number.isNaN(Date.parse(evento.date)))) {
+      throw new BadRequestError('El campo date debe ser una fecha válida en formato ISO 8601');
     }
     if (evento.capacity !== undefined && !(Number.isInteger(evento.capacity) && evento.capacity > 0)) {
       throw new BadRequestError('El campo capacity debe ser un entero mayor que 0');

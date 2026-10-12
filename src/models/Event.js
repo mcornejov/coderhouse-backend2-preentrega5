@@ -15,7 +15,8 @@ const eventSchema = new mongoose.Schema(
       enum: ['draft', 'published', 'cancelled', 'finished'],
       default: 'draft',
     },
-    organizer: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    // Siempre es el usuario autenticado que creó el evento (lo fija el servicio)
+    organizer: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     // Categoría del evento (cata, taller, charla, música). Se gestiona con el CRUD de eventos.
     category: { type: mongoose.Schema.Types.ObjectId, ref: 'Category' },
   },

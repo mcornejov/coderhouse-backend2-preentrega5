@@ -13,15 +13,20 @@ export default class UsersService {
   }
 
   /**
-   * Cambia el rol de un usuario. El rol debe ser uno de los definidos en la matriz.
-   * El cambio rige en el próximo login: el JWT ya emitido conserva el rol anterior
-   * hasta que expire (sesión sin estado).
-   * @param {string} id
-   * @param {unknown} role
+   * Cambia el rol de un usuario. El rol debe ser uno de los definidos en la matriz y el
+   * admin no puede cambiar el suyo: evita que la instalación quede sin administradores
+   * por error. El cambio rige en el próximo login del usuario afectado: el JWT ya
+   * emitido conserva el rol anterior hasta que expire (sesión sin estado).
+   * @param {string} id usuario a modificar
+   * @param {unknown} role nuevo rol
+   * @param {{ id: string }} solicitante admin autenticado (req.user)
    */
-  async asignarRol(id, role) {
+  async asignarRol(id, role, solicitante) {
     if (!esRolValido(role)) {
       throw new BadRequestError(`El rol debe ser uno de: ${USER_ROLES.join(', ')}`);
+    }
+    if (solicitante && id === solicitante.id) {
+      throw new BadRequestError('No puedes cambiar tu propio rol');
     }
 
     const usuario = await this.repository.updateRoleById(id, role);

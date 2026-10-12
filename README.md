@@ -120,7 +120,7 @@ export const PERMISOS = Object.freeze({
 | Código | Significa | Cuándo | Respuesta |
 |--------|-----------|--------|-----------|
 | **401 Unauthorized** | **No sé quién eres.** Falta la cookie `currentUser`, el token está manipulado, firmado con otro secreto o expirado | Lo responde el middleware de **autenticación** (`auth`) en cualquier ruta privada | `{ "status": "error", "message": "No autenticado" }` |
-| **403 Forbidden** | **Sé quién eres y no puedes hacer esto.** Hay sesión válida pero el rol no está en los permitidos, o el recurso no es tuyo | Lo responde el middleware de **autorización** (`authorize`) o el servicio al verificar la propiedad | `{ "status": "error", "message": "No tienes permisos para realizar esta acción" }` |
+| **403 Forbidden** | **Sé quién eres y no puedes hacer esto.** Hay sesión válida pero el rol no está en los permitidos, o el recurso no es tuyo | Lo responde el middleware de **autorización** (`authorize`) o el servicio al verificar la propiedad | `{ "status": "error", "message": "No tienes permisos para realizar esta acción" }` (por rol) · `{ "status": "error", "message": "Solo puedes modificar tus propios eventos" }` (por propiedad) |
 
 Ninguno de los dos casos llega al `500`: ambos son errores de la aplicación (`UnauthorizedError`,
 `ForbiddenError` en `utils/errors.util.js`) que el middleware global traduce al código HTTP. Los
@@ -345,7 +345,7 @@ Request (con la cookie de un `organizer` o `admin`):
 | Campo | Reglas |
 |-------|--------|
 | `title`, `location` | Obligatorios, texto no vacío |
-| `date` | Obligatoria, fecha válida (ISO 8601) |
+| `date` | Obligatoria, texto con una fecha válida en formato ISO 8601 (`"2027-03-15T19:00:00.000Z"`); un número o booleano se rechaza |
 | `capacity` | Obligatorio, entero mayor que 0 |
 | `price` | Opcional, número mayor o igual a 0 (por defecto 0) |
 | `description` | Opcional |
@@ -364,7 +364,8 @@ Response `201`:
 | `401` | Sin cookie o token inválido | `{ "status": "error", "message": "No autenticado" }` |
 | `403` | Sesión válida con rol `user` | `{ "status": "error", "message": "No tienes permisos para realizar esta acción" }` |
 | `400` | Faltan campos | `{ "status": "error", "message": "Faltan campos obligatorios: date, location, capacity" }` |
-| `400` | Valor inválido | `{ "status": "error", "message": "El campo capacity debe ser un entero mayor que 0" }` (y análogos para `date`, `price`, `title`, `location`) |
+| `400` | Valor inválido | `{ "status": "error", "message": "El campo capacity debe ser un entero mayor que 0" }` · `"El campo date debe ser una fecha válida en formato ISO 8601"` · análogos para `price`, `title`, `location` |
+| `413` | Body mayor a 100 KB | `{ "status": "error", "message": "El cuerpo de la petición es demasiado grande" }` |
 
 ### `PUT /api/events/:eid`
 
@@ -405,9 +406,10 @@ Ruta administrativa: `auth` + `authorize(admin)`.
 { "role": "organizer" }
 ```
 
-`200` con el usuario actualizado · `400` `El rol debe ser uno de: user, organizer, admin` · `404` si el
-usuario no existe · `401` / `403` como el resto de rutas administrativas. El nuevo rol rige en el
-próximo login del usuario.
+`200` con el usuario actualizado · `400` `El rol debe ser uno de: user, organizer, admin` · `400`
+`No puedes cambiar tu propio rol` (un admin no se degrada a sí mismo: evita dejar la instalación sin
+administradores) · `404` si el usuario no existe · `401` / `403` como el resto de rutas
+administrativas. El nuevo rol rige en el próximo login del usuario.
 
 ## Cómo probarlo
 
@@ -519,8 +521,9 @@ Todos los casos anteriores están automatizados:
 pnpm test
 ```
 
-76 tests con MongoDB en memoria. Los 43 de la entrega anterior siguen pasando (autenticación con
-Passport, registro, login, cookie, configuración). Los 33 nuevos cubren esta entrega:
+79 tests con MongoDB en memoria. Los 44 heredados siguen pasando (autenticación con Passport,
+registro, login, cookie, configuración; el caso de id inexistente ahora distingue formato inválido
+`400` de inexistente `404`). Los 35 nuevos cubren esta entrega:
 
 - `test/authorize.test.js`: la matriz define los tres roles con `user` por defecto y es inmutable;
   `authorize` deja pasar al rol permitido, responde `403` al no permitido y `401` si se usa sin
@@ -529,12 +532,13 @@ Passport, registro, login, cookie, configuración). Los 33 nuevos cubren esta en
   → `401`; con sesión de `user` → `403` (nunca 401 ni 500); `/current` responde `200` a los tres roles.
 - `test/events.test.js`: `POST` con `user` → `403` (y no se crea nada); con `organizer`/`admin` →
   `201` con `organizer` igual al id de la sesión; `organizer`/`status` del body ignorados; `400`
-  por campos faltantes o inválidos; listado y detalle públicos; `PUT` del dueño → `200`, de otro
-  `organizer` → `403` sin modificar la base, de `admin` → `200` conservando al organizador original;
-  `404` inexistente, `400` id inválido o sin campos.
+  por campos faltantes o inválidos (incluida una fecha numérica o `null`); listado y detalle
+  públicos; `PUT` del dueño → `200`, de otro `organizer` → `403` sin modificar la base, de `admin` →
+  `200` conservando al organizador original; `404` inexistente (también si el evento desaparece
+  entre leer y escribir), `400` id inválido o sin campos; body de 150 KB → `413`.
 - `test/users.test.js`: `GET /api/users` con `organizer` → `403`, con `admin` → `200` sin hashes;
   `PATCH .../role` promueve a `organizer` y el nuevo rol aparece tras volver a iniciar sesión;
-  rol inválido → `400`; usuario inexistente → `404`.
+  rol inválido → `400`; el admin no cambia su propio rol → `400`; usuario inexistente → `404`.
 
 ## Decisiones de seguridad
 
@@ -624,7 +628,7 @@ coderhouse-backend2-preentrega5/
 │   │   ├── auth.middleware.js        # autenticarCon(estrategia) envuelve passport.authenticate; auth = 'current' → 401
 │   │   ├── authorize.middleware.js   # authorize(...roles): compara req.user.role → 403
 │   │   ├── notFound.middleware.js
-│   │   └── error.middleware.js       # traduce errores a 400 / 401 / 403 / 404 / 409 / 500
+│   │   └── error.middleware.js       # traduce errores a 400 / 401 / 403 / 404 / 409 / 413 / 500
 │   ├── scripts/
 │   │   └── asignar-rol.js            # pnpm asignar-rol <email> <rol>: primer admin de una instalación
 │   └── utils/

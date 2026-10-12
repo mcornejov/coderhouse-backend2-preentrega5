@@ -37,7 +37,7 @@ try {
   }
 
   const actualizado = await service.asignarRol(usuario._id.toString(), rolArg);
-  console.log(`Rol actualizado: ${actualizado.email} → ${actualizado.role} (base ${config.mongoUrl.replace(/\/\/.*@/, '//***@')})`);
+  console.log(`Rol actualizado: ${actualizado.email} → ${actualizado.role} (base ${config.mongoUrl.replace(/\/\/[^/]*@/, '//***@')})`);
   console.log('Si el usuario tiene una sesión abierta, debe volver a iniciar sesión para que el JWT refleje el nuevo rol.');
 } catch (error) {
   console.error(`No fue posible asignar el rol: ${error.message}`);

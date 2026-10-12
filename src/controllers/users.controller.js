@@ -17,7 +17,7 @@ export default class UsersController {
 
   asignarRol = async (req, res, next) => {
     try {
-      const usuario = await this.service.asignarRol(req.params.uid, req.body?.role);
+      const usuario = await this.service.asignarRol(req.params.uid, req.body?.role, req.user);
       return responderExito(res, usuario);
     } catch (error) {
       return next(error);

@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import request from 'supertest';
 import app from '../src/app.js';
 import Event from '../src/models/Event.js';
+import EventsService from '../src/services/events.service.js';
 import { iniciarBaseDePrueba, limpiarBaseDePrueba, detenerBaseDePrueba } from './setup.js';
 import { crearUsuarioConRol, eventoValido } from './helpers.js';
 
@@ -73,7 +74,11 @@ describe('POST /api/events', () => {
   test('400 si los valores no son válidos (fecha, cupo, precio)', async () => {
     const organizer = await crearUsuarioConRol('organizer');
     const casos = [
-      [{ date: 'mañana' }, 'El campo date debe ser una fecha válida'],
+      [{ date: 'mañana' }, 'El campo date debe ser una fecha válida en formato ISO 8601'],
+      [{ date: 0 }, 'El campo date debe ser una fecha válida en formato ISO 8601'],
+      [{ date: 1700000000000 }, 'El campo date debe ser una fecha válida en formato ISO 8601'],
+      [{ date: null }, 'El campo date debe ser una fecha válida en formato ISO 8601'],
+      [{ date: true }, 'El campo date debe ser una fecha válida en formato ISO 8601'],
       [{ capacity: 0 }, 'El campo capacity debe ser un entero mayor que 0'],
       [{ capacity: '12' }, 'El campo capacity debe ser un entero mayor que 0'],
       [{ price: -1 }, 'El campo price debe ser un número mayor o igual a 0'],
@@ -177,5 +182,32 @@ describe('PUT /api/events/:eid (propiedad del recurso)', () => {
     const creado = await crearEventoComo(organizer);
     const res = await request(app).put(`${EVENTS}/${creado.id}`).set('Cookie', organizer.cookie).send({ capacity: -5 });
     assert.equal(res.status, 400);
+    const fecha = await request(app).put(`${EVENTS}/${creado.id}`).set('Cookie', organizer.cookie).send({ date: 0 });
+    assert.equal(fecha.status, 400);
+    assert.equal(fecha.body.message, 'El campo date debe ser una fecha válida en formato ISO 8601');
+  });
+
+  test('si el evento desaparece entre la lectura y la escritura → 404, no 200 con payload null', async () => {
+    const repositorioQueBorra = {
+      getById: async () => ({ id: 'x', organizer: 'org-1' }),
+      updateById: async () => null,
+    };
+    const service = new EventsService(repositorioQueBorra);
+    await assert.rejects(
+      service.actualizar('x', { title: 'Nuevo' }, { id: 'org-1', role: 'organizer' }),
+      (error) => error.status === 404
+    );
+  });
+});
+
+describe('Errores del parser de body', () => {
+  test('body mayor al límite → 413, no 500', async () => {
+    const organizer = await crearUsuarioConRol('organizer');
+    const res = await request(app)
+      .post(EVENTS)
+      .set('Cookie', organizer.cookie)
+      .send({ ...eventoValido, description: 'x'.repeat(150 * 1024) });
+    assert.equal(res.status, 413);
+    assert.deepEqual(res.body, { status: 'error', message: 'El cuerpo de la petición es demasiado grande' });
   });
 });
