@@ -69,6 +69,16 @@ describe('PATCH /api/users/:uid/role (ruta administrativa)', () => {
     assert.equal(sigue.body.payload.find((u) => u.id === admin.id).role, 'admin');
   });
 
+  test('tampoco con su propio id escrito en mayúsculas (la base lo acepta como el mismo documento)', async () => {
+    const admin = await crearUsuarioConRol('admin');
+    const res = await request(app).patch(`${USERS}/${admin.id.toUpperCase()}/role`).set('Cookie', admin.cookie).send({ role: 'user' });
+    assert.equal(res.status, 400);
+    assert.equal(res.body.message, 'No puedes cambiar tu propio rol');
+    const sigue = await request(app).get(USERS).set('Cookie', admin.cookie);
+    assert.equal(sigue.status, 200);
+    assert.equal(sigue.body.payload.find((u) => u.id === admin.id).role, 'admin');
+  });
+
   test('rol inválido → 400 con los roles posibles', async () => {
     const user = await crearUsuarioConRol('user');
     const admin = await crearUsuarioConRol('admin');

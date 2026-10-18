@@ -25,14 +25,23 @@ export default class UsersService {
     if (!esRolValido(role)) {
       throw new BadRequestError(`El rol debe ser uno de: ${USER_ROLES.join(', ')}`);
     }
-    if (solicitante && id === solicitante.id) {
-      throw new BadRequestError('No puedes cambiar tu propio rol');
-    }
 
-    const usuario = await this.repository.updateRoleById(id, role);
+    // Se carga primero el usuario para comparar ids ya canónicos (los del DTO): el id de
+    // la URL admite variantes que la base acepta como el mismo documento (hexadecimal en
+    // mayúsculas) y una comparación de texto directa las dejaría pasar.
+    const usuario = await this.repository.findById(id);
     if (!usuario) {
       throw new NotFoundError(`No existe un usuario con id ${id}`);
     }
-    return usuario;
+    if (solicitante && usuario.id === solicitante.id) {
+      throw new BadRequestError('No puedes cambiar tu propio rol');
+    }
+
+    const actualizado = await this.repository.updateRoleById(usuario.id, role);
+    if (!actualizado) {
+      // El usuario desapareció entre la lectura y la escritura
+      throw new NotFoundError(`No existe un usuario con id ${id}`);
+    }
+    return actualizado;
   }
 }

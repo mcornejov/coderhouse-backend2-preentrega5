@@ -346,7 +346,7 @@ Request (con la cookie de un `organizer` o `admin`):
 | Campo | Reglas |
 |-------|--------|
 | `title`, `location` | Obligatorios, texto no vacío |
-| `date` | Obligatoria, texto con una fecha válida en formato ISO 8601 (`"2027-03-15T19:00:00.000Z"`); un número o booleano se rechaza |
+| `date` | Obligatoria, texto en formato ISO 8601 (`"2027-03-15"`, `"2027-03-15T19:00:00"` o `"2027-03-15T19:00:00.000Z"`) con un día que exista en el calendario; un número, un booleano u otros formatos (`"March 7, 2027"`, `"2027-02-30"`) se rechazan |
 | `capacity` | Obligatorio, entero mayor que 0 |
 | `price` | Opcional, número mayor o igual a 0 (por defecto 0) |
 | `description` | Opcional |
@@ -522,7 +522,7 @@ Todos los casos anteriores están automatizados:
 pnpm test
 ```
 
-79 tests con MongoDB en memoria. Los 44 heredados siguen pasando (autenticación con Passport,
+81 tests con MongoDB en memoria. Los 44 heredados siguen pasando (autenticación con Passport,
 registro, login, cookie, configuración; el caso de id inexistente ahora distingue formato inválido
 `400` de inexistente `404`). Los 35 nuevos cubren esta entrega:
 

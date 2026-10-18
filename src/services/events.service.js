@@ -1,6 +1,6 @@
 import { esAdmin } from '../config/roles.config.js';
 import { BadRequestError, NotFoundError, ForbiddenError } from '../utils/errors.util.js';
-import { isNonEmptyString } from '../utils/validators.js';
+import { isNonEmptyString, isIsoDateString } from '../utils/validators.js';
 
 // Campos que el cliente puede enviar al crear o modificar un evento. `organizer` y
 // `status` no están: el organizador sale de la sesión y el estado se gestiona aparte.
@@ -86,8 +86,9 @@ export default class EventsService {
     return resultado;
   }
 
-  // Reglas de contenido mínimas. La fecha debe llegar como texto (ISO 8601): un número
-  // o un booleano también "son" una fecha para new Date() y guardarían 1970 sin aviso.
+  // Reglas de contenido mínimas. La fecha debe llegar como texto ISO 8601 (ver
+  // isIsoDateString): un número o un booleano también "son" una fecha para new Date() y
+  // guardarían 1970 sin aviso, y "2027-02-30" se convertiría en el 2 de marzo.
   #validarValores(evento) {
     for (const campo of ['title', 'location']) {
       if (evento[campo] !== undefined && !isNonEmptyString(evento[campo])) {
@@ -97,7 +98,7 @@ export default class EventsService {
     if (evento.description !== undefined && typeof evento.description !== 'string') {
       throw new BadRequestError('El campo description debe ser un texto');
     }
-    if (evento.date !== undefined && !(typeof evento.date === 'string' && !Number.isNaN(Date.parse(evento.date)))) {
+    if (evento.date !== undefined && !isIsoDateString(evento.date)) {
       throw new BadRequestError('El campo date debe ser una fecha válida en formato ISO 8601');
     }
     if (evento.capacity !== undefined && !(Number.isInteger(evento.capacity) && evento.capacity > 0)) {

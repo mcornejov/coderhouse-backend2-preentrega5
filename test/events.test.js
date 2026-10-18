@@ -79,6 +79,12 @@ describe('POST /api/events', () => {
       [{ date: 1700000000000 }, 'El campo date debe ser una fecha válida en formato ISO 8601'],
       [{ date: null }, 'El campo date debe ser una fecha válida en formato ISO 8601'],
       [{ date: true }, 'El campo date debe ser una fecha válida en formato ISO 8601'],
+      // Date.parse los aceptaría: "1" como el año 2001, "2027-02-30" como el 2 de marzo
+      [{ date: '1' }, 'El campo date debe ser una fecha válida en formato ISO 8601'],
+      [{ date: 'March 7, 2027' }, 'El campo date debe ser una fecha válida en formato ISO 8601'],
+      [{ date: '2027-02-30' }, 'El campo date debe ser una fecha válida en formato ISO 8601'],
+      [{ date: '2027-13-01' }, 'El campo date debe ser una fecha válida en formato ISO 8601'],
+      [{ date: '2027-03-15T24:00:00Z' }, 'El campo date debe ser una fecha válida en formato ISO 8601'],
       [{ capacity: 0 }, 'El campo capacity debe ser un entero mayor que 0'],
       [{ capacity: '12' }, 'El campo capacity debe ser un entero mayor que 0'],
       [{ price: -1 }, 'El campo price debe ser un número mayor o igual a 0'],
@@ -88,6 +94,17 @@ describe('POST /api/events', () => {
       const res = await request(app).post(EVENTS).set('Cookie', organizer.cookie).send({ ...eventoValido, ...cambio });
       assert.equal(res.status, 400, JSON.stringify(cambio));
       assert.equal(res.body.message, mensaje);
+    }
+  });
+});
+
+describe('Formatos de fecha aceptados', () => {
+  test('solo día, con hora sin zona y con zona explícita → 201', async () => {
+    const organizer = await crearUsuarioConRol('organizer');
+    for (const date of ['2027-03-15', '2027-03-15T19:00:00', '2027-03-15T19:00:00.000Z', '2027-03-15T19:00:00-03:00']) {
+      const res = await request(app).post(EVENTS).set('Cookie', organizer.cookie).send({ ...eventoValido, date });
+      assert.equal(res.status, 201, date);
+      assert.equal(new Date(res.body.payload.date).getTime(), Date.parse(date), date);
     }
   });
 });
