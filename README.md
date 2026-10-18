@@ -66,8 +66,9 @@ El servidor valida la configuración al arrancar (Fail-Fast): si falta una varia
 `PORT`/`JWT_EXPIRES_IN` tienen un valor inválido, se detiene con un mensaje claro en vez de
 servir una API rota. El secreto **nunca está en el código**: solo se lee de `process.env`.
 
-El archivo `.env` está excluido del repositorio mediante `.gitignore`; nunca se versionan
-credenciales.
+El archivo `.env` y la carpeta `node_modules/` están excluidos del repositorio mediante
+`.gitignore`: nunca se versionan credenciales ni dependencias instaladas. Las credenciales reales
+(URI de Atlas, secreto del JWT) viven solo en el `.env` local de cada entorno.
 
 ## Cómo ejecutar
 
@@ -97,7 +98,7 @@ compara roles a mano.
 | Consultar eventos (listado y detalle) | `GET /api/events`, `GET /api/events/:eid` | ✅ | ✅ | ✅ | ✅ |
 | Ver la propia sesión | `GET /api/sessions/current` | ✅ | ✅ | ✅ | ❌ 401 |
 | Crear eventos | `POST /api/events` | ❌ 403 | ✅ | ✅ | ❌ 401 |
-| Modificar eventos **propios** | `PUT /api/events/:eid` | ❌ 403 | ✅ | ✅ | ❌ 401 |
+| Modificar/cancelar eventos **propios** (cancelar llega con el cambio de estado de la próxima entrega) | `PUT /api/events/:eid` | ❌ 403 | ✅ | ✅ | ❌ 401 |
 | Modificar **cualquier** evento | `PUT /api/events/:eid` | ❌ 403 | ❌ 403 | ✅ | ❌ 401 |
 | Ver todos los usuarios | `GET /api/users` | ❌ 403 | ❌ 403 | ✅ | ❌ 401 |
 | Asignar roles | `PATCH /api/users/:uid/role` | ❌ 403 | ❌ 403 | ✅ | ❌ 401 |
