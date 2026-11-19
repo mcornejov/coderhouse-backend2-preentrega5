@@ -1,8 +1,8 @@
 # Café Aurora · Plataforma de Eventos e Inscripciones
 
 Proyecto de **Backend II** de CoderHouse: una API REST con Express organizada por capas y
-persistencia en MongoDB, que crece entrega a entrega hacia una plataforma completa de eventos
-con autenticación, roles, inscripciones y control de cupos.
+persistencia en MongoDB para gestionar los eventos de una cafetería (catas, talleres de barismo,
+charlas y música en vivo), con autenticación y autorización por roles.
 
 **Pre-entrega 5:** autorización por **roles**. Ya no alcanza con iniciar sesión: cada acción se
 valida según el rol del usuario (`user`, `organizer`, `admin`) con una matriz de permisos
